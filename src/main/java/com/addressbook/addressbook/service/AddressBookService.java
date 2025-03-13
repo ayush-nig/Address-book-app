@@ -1,10 +1,10 @@
 package com.addressbook.addressbook.service;
 
-import com.addressbook.addressbook.model.AddressBook;
+import com.addressbook.addressbook.entity.AddressBookEntity;
+import com.addressbook.addressbook.repository.AddressBookRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -12,47 +12,44 @@ import java.util.Optional;
 @Service
 public class AddressBookService {
 
-    private final List<AddressBook> addressBookList = new ArrayList<>();
+    private final AddressBookRepository repository;
 
-    public List<AddressBook> getAllContacts() {
-        log.debug("Fetching all contacts");
-        return addressBookList;
+    public AddressBookService(AddressBookRepository repository) {
+        this.repository = repository;
     }
 
-    public Optional<AddressBook> getContactById(int id) {
+    public List<AddressBookEntity> getAllContacts() {
+        log.debug("Fetching all contacts from database");
+        return repository.findAll();
+    }
+
+    public Optional<AddressBookEntity> getContactById(int id) {
         log.debug("Fetching contact with ID: {}", id);
-        return addressBookList.stream()
-                .filter(contact -> contact.getId() == id)
-                .findFirst();
+        return repository.findById(id);
     }
 
-    public AddressBook addContact(AddressBook contact) {
-        log.debug("Adding new contact: {}", contact);
-        addressBookList.add(contact);
-        return contact;
+    public AddressBookEntity addContact(AddressBookEntity contact) {
+        log.debug("Adding new contact to database: {}", contact);
+        return repository.save(contact);
     }
 
-    public Optional<AddressBook> updateContact(int id, AddressBook updatedContact) {
-        log.debug("Updating contact with ID: {}", id);
-        for (int i = 0; i < addressBookList.size(); i++) {
-            if (addressBookList.get(i).getId() == id) {
-                addressBookList.set(i, updatedContact);
-                log.debug("Updated contact: {}", updatedContact);
-                return Optional.of(updatedContact);
-            }
+    public Optional<AddressBookEntity> updateContact(int id, AddressBookEntity updatedContact) {
+        if (repository.existsById(id)) {
+            updatedContact.setId(id);
+            log.debug("Updating contact with ID: {}", id);
+            return Optional.of(repository.save(updatedContact));
         }
         log.warn("Contact with ID {} not found for update", id);
         return Optional.empty();
     }
 
     public boolean deleteContact(int id) {
-        log.debug("Deleting contact with ID: {}", id);
-        boolean removed = addressBookList.removeIf(contact -> contact.getId() == id);
-        if (removed) {
-            log.debug("Contact deleted successfully");
-        } else {
-            log.warn("Contact with ID {} not found for deletion", id);
+        if (repository.existsById(id)) {
+            repository.deleteById(id);
+            log.debug("Deleted contact with ID: {}", id);
+            return true;
         }
-        return removed;
+        log.warn("Contact with ID {} not found for deletion", id);
+        return false;
     }
 }
