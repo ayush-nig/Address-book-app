@@ -5,6 +5,7 @@ import com.addressbook.addressbook.service.AddressBookService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -30,13 +31,15 @@ public class AddressBookController {
     }
 
     @PostMapping
-    public ResponseEntity<AddressBookEntity> addContact(@RequestBody AddressBookEntity contact) {
+    public ResponseEntity<AddressBookEntity> addContact(@Valid @RequestBody AddressBookEntity contact) {
         AddressBookEntity savedContact = service.addContact(contact);
         return ResponseEntity.ok(savedContact);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<AddressBookEntity> updateContact(@PathVariable int id, @RequestBody AddressBookEntity updatedContact) {
+    public ResponseEntity<AddressBookEntity> updateContact(
+            @PathVariable int id,
+            @Valid @RequestBody AddressBookEntity updatedContact) {
         return service.updateContact(id, updatedContact)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
