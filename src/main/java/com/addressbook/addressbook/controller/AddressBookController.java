@@ -1,6 +1,6 @@
 package com.addressbook.addressbook.controller;
 
-import com.addressbook.addressbook.entity.AddressBookEntity;
+import com.addressbook.addressbook.dto.AddressBookDTO;
 import com.addressbook.addressbook.service.AddressBookService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,38 +19,31 @@ public class AddressBookController {
     }
 
     @GetMapping
-    public ResponseEntity<List<AddressBookEntity>> getAllContacts() {
+    public ResponseEntity<List<AddressBookDTO>> getAllContacts() {
         return ResponseEntity.ok(service.getAllContacts());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AddressBookEntity> getContactById(@PathVariable int id) {
-        return service.getContactById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<AddressBookDTO> getContactById(@PathVariable int id) {
+        return ResponseEntity.ok(service.getContactById(id));
     }
 
     @PostMapping
-    public ResponseEntity<AddressBookEntity> addContact(@Valid @RequestBody AddressBookEntity contact) {
-        AddressBookEntity savedContact = service.addContact(contact);
+    public ResponseEntity<AddressBookDTO> addContact(@Valid @RequestBody AddressBookDTO contactDTO) {
+        AddressBookDTO savedContact = service.addContact(contactDTO);
         return ResponseEntity.ok(savedContact);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<AddressBookEntity> updateContact(
+    public ResponseEntity<AddressBookDTO> updateContact(
             @PathVariable int id,
-            @Valid @RequestBody AddressBookEntity updatedContact) {
-        return service.updateContact(id, updatedContact)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+            @Valid @RequestBody AddressBookDTO contactDTO) {
+        return ResponseEntity.ok(service.updateContact(id, contactDTO));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteContact(@PathVariable int id) {
-        if (service.deleteContact(id)) {
-            return ResponseEntity.noContent().build();
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+        service.deleteContact(id);
+        return ResponseEntity.noContent().build();
     }
 }
