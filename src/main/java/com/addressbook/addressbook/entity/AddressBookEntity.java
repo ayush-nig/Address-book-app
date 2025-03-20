@@ -1,16 +1,16 @@
 package com.addressbook.addressbook.entity;
 
-import com.addressbook.addressbook.dto.AddressBookDTO;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import jakarta.persistence.*;
 
-@Entity
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
+@Entity
+@Table(name = "address_book")
 public class AddressBookEntity {
 
     @Id
@@ -20,10 +20,4 @@ public class AddressBookEntity {
     private String name;
     private String email;
     private String phoneNumber;
-
-    public AddressBookEntity(AddressBookDTO dto) {
-        this.name = dto.getName();
-        this.email = dto.getEmail();
-        this.phoneNumber = dto.getPhoneNumber();
-    }
 }

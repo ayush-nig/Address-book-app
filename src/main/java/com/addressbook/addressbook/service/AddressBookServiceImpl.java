@@ -2,17 +2,19 @@ package com.addressbook.addressbook.service;
 
 import com.addressbook.addressbook.dto.AddressBookDTO;
 import com.addressbook.addressbook.entity.AddressBookEntity;
-import com.addressbook.addressbook.exception.EntityNotFoundException;
 import com.addressbook.addressbook.repository.AddressBookRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
-@Service
+@Service  // ✅ Make sure this is present
 public class AddressBookServiceImpl implements AddressBookService {
 
     private final AddressBookRepository repository;
@@ -22,47 +24,78 @@ public class AddressBookServiceImpl implements AddressBookService {
     }
 
     @Override
+    @Cacheable(value = "contacts")
     public List<AddressBookDTO> getAllContacts() {
-        log.debug("Fetching all contacts from database");
+        log.info("Fetching all contacts from DB");
         return repository.findAll().stream()
-                .map(contact -> new AddressBookDTO(contact.getName(), contact.getEmail(), contact.getPhoneNumber()))
+                .map(contact -> new AddressBookDTO(
+                        contact.getId(),
+                        contact.getName(),
+                        contact.getEmail(),
+                        contact.getPhoneNumber()
+                ))
                 .collect(Collectors.toList());
     }
 
     @Override
+    @Cacheable(value = "contact", key = "#id")
     public AddressBookDTO getContactById(int id) {
-        log.debug("Fetching contact with ID: {}", id);
-        AddressBookEntity contact = repository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Contact with ID " + id + " not found"));
-        return new AddressBookDTO(contact.getName(), contact.getEmail(), contact.getPhoneNumber());
+        log.info("Fetching contact with ID {} from DB", id);
+        return repository.findById(id)
+                .map(contact -> new AddressBookDTO(
+                        contact.getId(),
+                        contact.getName(),
+                        contact.getEmail(),
+                        contact.getPhoneNumber()
+                ))
+                .orElseThrow(() -> new RuntimeException("Contact not found"));
     }
 
     @Override
+    @CachePut(value = "contact", key = "#result.id")
+    @CacheEvict(value = "contacts", allEntries = true)
     public AddressBookDTO addContact(AddressBookDTO contactDTO) {
-        log.debug("Adding new contact: {}", contactDTO);
-        AddressBookEntity contact = new AddressBookEntity(contactDTO);
-        repository.save(contact);
-        return contactDTO;
+        AddressBookEntity contact = repository.save(contactDTO.toEntity());
+        log.info("Contact added with ID: {}", contact.getId());
+        return new AddressBookDTO(
+                contact.getId(),
+                contact.getName(),
+                contact.getEmail(),
+                contact.getPhoneNumber()
+        );
     }
 
     @Override
+    @CachePut(value = "contact", key = "#id")
+    @CacheEvict(value = "contacts", allEntries = true)
     public AddressBookDTO updateContact(int id, AddressBookDTO contactDTO) {
-        if (!repository.existsById(id)) {
-            throw new EntityNotFoundException("Contact with ID " + id + " not found for update");
-        }
-        AddressBookEntity updatedContact = new AddressBookEntity(contactDTO);
-        updatedContact.setId(id);
-        repository.save(updatedContact);
-        log.debug("Updating contact with ID: {}", id);
-        return contactDTO;
+        AddressBookEntity existingContact = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Contact not found"));
+
+        existingContact.setName(contactDTO.getName());
+        existingContact.setEmail(contactDTO.getEmail());
+        existingContact.setPhoneNumber(contactDTO.getPhoneNumber());
+        repository.save(existingContact);
+
+        log.info("Contact updated with ID: {}", id);
+        return new AddressBookDTO(
+                existingContact.getId(),
+                existingContact.getName(),
+                existingContact.getEmail(),
+                existingContact.getPhoneNumber()
+        );
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(value = "contact", key = "#id"),
+            @CacheEvict(value = "contacts", allEntries = true)
+    })
     public void deleteContact(int id) {
-        if (!repository.existsById(id)) {
-            throw new EntityNotFoundException("Contact with ID " + id + " not found for deletion");
-        }
+        AddressBookEntity existingContact = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Contact not found"));
+
         repository.deleteById(id);
-        log.debug("Deleted contact with ID: {}", id);
+        log.info("Contact deleted with ID: {}", id);
     }
 }
